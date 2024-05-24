@@ -1,0 +1,20 @@
+### Start new Session
+GET {{ai_host}}/start
+
+### Ask initial question
+GET {{ai_host}}/ask?message=What is the difference between build and consumer POM
+
+### Ask next question
+GET {{ai_host}}/ask?message=Which persons have worked on build pom documentation
+
+### Ask for Hervé
+GET {{ai_host}}/ask?message=On which topics did Hervé work
+
+### Ask for a migration
+GET {{ai_host}}/ask?message=What needs to be done to migrate away from Sonatype Aether
+
+### Ask for terminology
+GET {{ai_host}}/ask?message=List top 10 terms in the context of Maven
+
+### Ask for acronynms
+GET {{ai_host}}/ask?message=List top 10 acronyms in the context of Maven (and their meaning)

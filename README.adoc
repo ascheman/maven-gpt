@@ -1,0 +1,119 @@
+= Maven GPT Web Application
+:icons: font
+:toc: left
+
+This project (Maven GPT) aims at answering common Maven questions, in particular for developers.
+It (currently) contains a web service that will accept HTTP GET requests at
+`http://localhost:8080/ask`.
+
+https://maven.apache.org/[Apache Maven] is a software project management and comprehension tool provided by the https://apache.org/[Apache Software Foundation] (ASF).
+
+Maven GPT will then use a simple AI model to generate a response to the question.
+The AI model uses an of-the-shelf GPT (like OpenAI ChatGPT) and additional information, e.g.,
+
+* [x] The https://cwiki.apache.org/confluence/display/MAVEN[ASF Confluence Maven] pages,
+* [ ] https://maven.apache.org/[Maven documentation]
+* [ ] https://issues.apache.org/jira/browse/[ASF Jira] issues,
+* [ ] Maven source code.
+
+== TechStack
+
+* The project uses https://spring.io/projects/spring-boot[Spring Boot] to provide its service.
+* The underlying https://docs.langchain4j.dev/[LangChain4J] technology would enable to use misc. LLMs.
+
++
+NOTE: Currently, we only use https://openai.com/[OpenAI] with an older model and its parameters:
+
++
+[source]
+----
+include::src/main/resources/application.properties[tags=open-ai-params]
+----
+
+== Building and running
+
+If you are familiar with Spring Boot
+
+=== Prerequisites
+
+NOTE: Currently, the project is only prepared to run locally (on your machine).
+
+* Install Java 21, e.g., via https://sdkman.io[SDKman]
+* Get an OpenAI API Token and store it in the environment:
+** To obtain an OpenAI API token, you will need to create an account on the OpenAI website.
+Once you have created an account, navigate to the API page and click on the "Get API Key" button.
+You will then be prompted to enter your billing information and select a plan.
+After completing these steps, you will be provided with an API key that you can use to access the OpenAI API.
+** Store the key locally.
+** Provide it for subsequent steps by either
+*** Adding it to xref:src/main/resources/application.properties[`application.resources`] (not recommended), or
+*** Creating a particular Spring profile, or
+*** Setting an environment variable `OPENAI_API_TOKEN` (cf. https://direnv.net[DirEnv] to store it in the long run).
+* Download (update) input sources
+** https://cwiki.apache.org/confluence/display/MAVEN[ASF Confluence Maven]
++
+[source,bash]
+----
+mkdir -p download/cwiki
+cd download/cwiki
+wget -P display/MAVEN -m --no-parent https://cwiki.apache.org/confluence/display/MAVEN/Index
+----
+
+=== Run the Vector Database
+
+Run the backing services (Elasticsearch and Kibana).
+
+[source, bash]
+----
+docker compose up -d
+----
+
+=== Load Data into Vector Database
+
+Load data into the vector store (Elasticsearch).
+This only needs to be performed once after each download/update.
+
+NOTE: Delete the content of the ES store before reloading the data.
+
+[source,bash]
+----
+./mvnw spring-boot:run -Ploaddata
+----
+
+TIP: Once data is loaded, you should see them via Kibana in the respective Index (`maven-gpt`).
+
+=== Run GPT Engine
+
+Start the application.
+
+[source,bash]
+----
+./mvnw spring-boot:run
+----
+
+Then access the endpoint
+
+[source,bash]
+----
+curl http://localhost:8080/ask?message="Which%20plugins%20handle%20the%20build%20lifecycle?"
+----
+
+=== Testing/Usage
+
+IntelliJ HTTP Requests in xref:src/test/http-requests/application.http[] show some manual testing and usage examples.
+
+== Administration
+
+=== Configuration
+
+TBD
+
+=== Elasticsearch administration
+
+IntelliJ HTTP Requests in xref:src/test/http-requests/elasticsearch.http[] provide some useful RESTfull access patterns for the underlying Elasticsearch engine.
+
+== Ideas
+
+* Load data from other sources, e.g., Mojohaus Plugins.
+* Generate and verify questions from Stackoverflow
+* Add feedback to the UI (once it is created) for users of the service (collect via DB and evaluate frequently)

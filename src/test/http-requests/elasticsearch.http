@@ -1,0 +1,18 @@
+### GET list of ES indices
+GET {{es_host}}/_cat/indices?v
+
+### Make single replica green
+PUT {{es_host}}/{{es_index}}/_settings
+Content-Type: application/json
+
+{
+  "index" : {
+    "number_of_replicas" : 0
+  }
+}
+
+### Get contents
+GET {{es_host}}/{{es_index}}/_search?pretty=true&q=*:*
+
+### Delete es_index
+DELETE {{es_host}}/{{es_index}}
