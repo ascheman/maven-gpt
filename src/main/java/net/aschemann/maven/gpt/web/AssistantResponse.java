@@ -7,7 +7,7 @@ public class AssistantResponse {
     private final List<Metadata> metadata;
     private final int messageStoreSize;
 
-    public record Metadata(String directory, String filename, String url) {
+    public record Metadata(String url) {
     }
 
     public AssistantResponse(String baseurl, String result,
@@ -16,9 +16,8 @@ public class AssistantResponse {
         this.result = result;
         this.messageStoreSize = messageStoreSize;
         this.metadata = metadata.stream().map(m -> {
-                    String filename = m.get("file_name");
-                    return new Metadata(m.get("absolute_directory_path"), filename,
-                            String.format("%s/%s", baseurl, filename)
+                    String filename = m.getString("file_name");
+                    return new Metadata(String.format("%s/%s", baseurl, filename)
                     );
                 }
         ).distinct().toList();
@@ -32,7 +31,7 @@ public class AssistantResponse {
         return metadata;
     }
 
-    public Integer getMessageStoreSize() {
+    public int getMessageStoreSize() {
         return messageStoreSize;
     }
 }
