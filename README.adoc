@@ -2,13 +2,38 @@
 :icons: font
 :toc: left
 
-This project (Maven GPT) aims at answering common Maven questions, in particular for developers.
-It (currently) contains a web service that will accept HTTP GET requests at
+[.lead]
+.Mission statement
+****
+This project (Maven GPT) aims at answering common https://maven.apache.org/[Apache Maven] questions, in particular for developers.
+It (currently) provides a web service that will accept HTTP GET requests at
 `http://localhost:8080/ask`.
 
-https://maven.apache.org/[Apache Maven] is a software project management and comprehension tool provided by the https://apache.org/[Apache Software Foundation] (ASF).
+The next steps will be to extend it by a suitable UI and host it on the public Internet.
+The author hopes to deliver a valuable service to the Maven community.
+Additionally, a small group of people will try to gain a better understanding of common problems with Maven (or at least its documentation) and feed this feedback back to the Maven developer community.
+****
 
-Maven GPT will then use a simple AI model to generate a response to the question.
+== Background
+
+Maven claims to be _a software project management and comprehension tool_ provided by the https://apache.org/[Apache Software Foundation] (ASF).
+In fact, Maven is used to build and test Java software (or other languages from the _JVM universe_).
+
+There are many sources to gain information about Maven like
+
+* The Maven Project Site
+* Mailing Lists
+* An ASF hosted Confluence and Jira
+* Misc. source code repositories (hosted by the ASF, GitHub and others)
+* Uncountable blog-articles, conference talks etc.
+
+However, even for experienced Maven users or developers, it is sometimes hard to answer questions or give background information (design decisions, current requirements, good practices, etc.).
+Sometimes answers and discussions are very opinionated.
+What seems to be a great approach in one context, could be an antipattern in a different scope.
+
+== Solution Outline
+
+Maven GPT (currently) uses a simple AI model to generate a response to the question.
 The AI model uses an of-the-shelf GPT (like OpenAI ChatGPT) and additional information, e.g.,
 
 * [x] The https://cwiki.apache.org/confluence/display/MAVEN[ASF Confluence Maven] pages,
@@ -18,8 +43,51 @@ The AI model uses an of-the-shelf GPT (like OpenAI ChatGPT) and additional infor
 
 == TechStack
 
+[plantuml, techstack, svg]
+.Context View
+----
+@startuml
+skinparam handwritten true
+
+!define CLOUDOGUURL https://raw.githubusercontent.com/cloudogu/plantuml-cloudogu-sprites/master
+!includeurl CLOUDOGUURL/common.puml
+!includeurl CLOUDOGUURL/dogus/cloudogu.puml
+!includeurl CLOUDOGUURL/dogus/confluence.puml
+!includeurl CLOUDOGUURL/tools/elastic.puml
+
+actor "Maven User/Developer" as user #beige
+interface "LLM" as llm
+
+node "localhost" #lightgreen {
+TOOL_ELASTIC(es, "Vector\nDatabase")
+llm -[hidden]- es
+control "Asynchronous\nDocument\nLoader" as dl #orange
+control "AI Agent" as agent #orange
+}
+
+DOGU_CONFLUENCE(confluence,"ASF Confluence")
+
+agent -[hidden]- dl
+
+dl -right-> es : Upload\nvectorized\nknowledge
+dl -down--> confluence : Analyze\nDocumentation
+
+user -down-> agent : query
+agent -right-> es : enrich query
+agent -right-> llm : context based query
+
+note right of llm #beige
+OpenAI API
+(or other Cloud
+provided or local
+hosted LLM)
+end note
+
+@enduml
+----
+
 * The project uses https://spring.io/projects/spring-boot[Spring Boot] to provide its service.
-* The underlying https://docs.langchain4j.dev/[LangChain4J] technology would enable to use misc. LLMs.
+* The underlying https://docs.langchain4j.dev/[LangChain4J] technology would enable to use misc. Large Language Models (LLMs).
 
 +
 NOTE: Currently, we only use https://openai.com/[OpenAI] with an older model and its parameters:
@@ -30,21 +98,23 @@ NOTE: Currently, we only use https://openai.com/[OpenAI] with an older model and
 include::src/main/resources/application.properties[tags=open-ai-params]
 ----
 
+* A vector database (or vectorized retrieval store, i.e., https://www.elastic.co/[Elasticsearch]) runs in the background to enable https://en.wikipedia.org/wiki/Rag[Retrieval Augmented Generation] (RAG).
+
 == Building and running
 
-If you are familiar with Spring Boot
+If you are familiar with Spring Boot, you may find other ways to play around with the project.
 
 === Prerequisites
 
 NOTE: Currently, the project is only prepared to run locally (on your machine).
 
-* Install Java 21, e.g., via https://sdkman.io[SDKman]
-* Get an OpenAI API Token and store it in the environment:
+* Install Java 21, e.g., via https://sdkman.io[SDKman].
+* Get an https://platform.openai.com/docs/quickstart/account-setup[OpenAI API Token] and store it in the environment:
 ** To obtain an OpenAI API token, you will need to create an account on the OpenAI website.
 Once you have created an account, navigate to the API page and click on the "Get API Key" button.
 You will then be prompted to enter your billing information and select a plan.
 After completing these steps, you will be provided with an API key that you can use to access the OpenAI API.
-** Store the key locally.
+** Store the key locally (for your convenience).
 ** Provide it for subsequent steps by either
 *** Adding it to xref:src/main/resources/application.properties[`application.resources`] (not recommended), or
 *** Creating a particular Spring profile, or
@@ -73,16 +143,27 @@ docker compose up -d
 Load data into the vector store (Elasticsearch).
 This only needs to be performed once after each download/update.
 
-NOTE: Delete the content of the ES store before reloading the data.
+[NOTE]
+====
+Delete the content of the ES store before reloading the data.
+
+[source, bash]
+----
+curl -X DELETE http://localhost:9200/maven-gpt
+----
+====
+
+Then run the xref:src/main/java/net/aschemann/maven/gpt/cli/CreateEmbeddingStore.java[document loader] class.
+
 
 [source,bash]
 ----
 ./mvnw spring-boot:run -Ploaddata
 ----
 
-TIP: Once data is loaded, you should see them via Kibana in the respective Index (`maven-gpt`).
+Once data is loaded, you should see them via http://localhost:5601/[Kibana] in the respective Index (`maven-gpt`).
 
-=== Run GPT Engine
+=== Run GPT Engine (AI Agent)
 
 Start the application.
 
@@ -98,6 +179,10 @@ Then access the endpoint
 curl http://localhost:8080/ask?message="Which%20plugins%20handle%20the%20build%20lifecycle?"
 ----
 
+This should respond with something like
+
+ {"result":"The plugins that handle the build lifecycle in Apache Maven are categorized into different groups based on their functionalities. Group 1 consists of core lifecycle plugins such as maven-clean-plugin, maven-compiler-plugin, maven-deploy-plugin, maven-help-plugin, maven-install-plugin, maven-gpg-plugin, maven-resources-plugin, maven-source-plugin, and maven-toolchains-plugin. Group 2 includes site-
+
 === Testing/Usage
 
 IntelliJ HTTP Requests in xref:src/test/http-requests/application.http[] show some manual testing and usage examples.
@@ -110,7 +195,7 @@ TBD
 
 === Elasticsearch administration
 
-IntelliJ HTTP Requests in xref:src/test/http-requests/elasticsearch.http[] provide some useful RESTfull access patterns for the underlying Elasticsearch engine.
+IntelliJ HTTP Requests in xref:src/test/http-requests/elasticsearch.http[] provide some useful RESTful access patterns for the underlying Elasticsearch engine.
 
 == Ideas
 
