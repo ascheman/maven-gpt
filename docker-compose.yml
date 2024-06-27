@@ -1,26 +1,12 @@
 services:
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+  postgres:
+    image: pgvector/pgvector:pg16
     environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
+      POSTGRES_DB: ${EMBEDDING_STORE_DATABASE:-embeddings}
+      POSTGRES_USER: ${EMBEDDING_STORE_USER:-postgres}
+      POSTGRES_PASSWORD: ${EMBEDDING_STORE_PASSWORD:-postgres}
+    restart: always
     ports:
-      - 9200:9200
-      - 9300:9300
+      - "${EMBEDDING_STORE_PORT:-5432}:5432"
     volumes:
-      - ./docker/volume/maven-elasticsearch:/usr/share/elasticsearch/data
-
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.13.4
-    environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      - xpack.security.enabled=false
-    ports:
-      - 5601:5601
-    depends_on:
-      - elasticsearch
-#
-#volumes:
-#  maven-elasticsearch:
-#    driver: local
-
+      - ./docker/volume/maven-pgvector:/var/lib/postgresql/data

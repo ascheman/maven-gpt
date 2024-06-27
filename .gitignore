@@ -40,3 +40,8 @@ download/
 ### Local configurations
 .envrc
 .sdkmanrc
+
+### Remainings from docToolchain
+dtcw
+docToolchainConfig.groovy
+.gradle/
