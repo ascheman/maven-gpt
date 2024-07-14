@@ -19,8 +19,9 @@ services:
       - 5601:5601
     depends_on:
       - elasticsearch
-#
-#volumes:
-#  maven-elasticsearch:
-#    driver: local
 
+  ollama:
+    image: langchain4j/ollama-llama3
+    container_name: ollama
+    ports:
+      - 11434:11434

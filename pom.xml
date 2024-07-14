@@ -29,7 +29,7 @@
 
         <dependency>
             <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-open-ai-spring-boot-starter</artifactId>
+            <artifactId>langchain4j-ollama-spring-boot-starter</artifactId>
             <version>${langchain4j-spring-boot.version}</version>
         </dependency>
 
